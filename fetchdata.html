@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Infinite Scroll Products</title>
+  <style>
+    .product {
+      border: 1px solid #ccc;
+      margin: 10px;
+      padding: 10px;
+      /* height: auto; */
+      /* width: 30%; */
+    }
+    #loader {
+      text-align: center;
+      padding: 20px;
+      font-weight: bold;
+    }
+
+    
+  </style>
+</head>
+<body style= "margin: 0;">
+    <header class="" style="background-color: blue; position: sticky; padding: 10px 60px; display: flex; justify-content: space-between; top: 0; z-index: 999; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.06); height: 25px;"></header>
+    
+  <h1 style="padding: 13px;">Infinite Scroll Products</h1>
+  <div id="product-list"></div>
+  <div id="loader">Loading...</div>
+
+  <script src="fetch.js"></script>
+</body>
+</html>
+

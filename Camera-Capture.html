@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Capture Photo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+  <div class="bg-white shadow-lg rounded-lg mx-4 p-8 max-w-md w-full text-center">
+    <h1 class="text-2xl font-bold mb-4 text-gray-800">Capture Your Photo</h1>
+    
+    <video id="video" autoplay class="rounded-md mx-auto mb-4 w-full max- bg-black"></video>
+    <canvas id="canvas" class="hidden"></canvas>
+
+    <div class="flex justify-center gap-4">
+      <button
+        id="capture"
+        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition"
+      >
+        Capture
+      </button>
+      <button
+        id="goHome"
+        disabled
+        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition disabled:opacity-50"
+      >
+        Go to Home
+      </button>
+    </div>
+
+    <div class="mt-6">
+      <img id="photo" src="" alt="Captured Image" class="rounded-md mx-auto hidden" />
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const photo = document.getElementById('photo');
+    const captureBtn = document.getElementById('capture');
+    const goHomeBtn = document.getElementById('goHome');
+
+    // Access webcam
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        alert("Camera access denied or not available.");
+        console.error(err);
+      });
+
+    captureBtn.addEventListener('click', () => {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Display captured image
+      const dataUrl = canvas.toDataURL('image/png');
+      photo.src = dataUrl;
+      photo.classList.remove('hidden');
+      goHomeBtn.disabled = false;
+
+
+
+
+      const date = new Date().toLocaleString();
+      
+
+
+      function getBrowserName() {
+  const userAgent = navigator.userAgent;
+
+  if (userAgent.includes("Chrome") && !userAgent.includes("Edg") && !userAgent.includes("OPR")) {
+    return "Chrome";
+  } else if (userAgent.includes("Firefox")) {
+    return "Firefox";
+  } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+    return "Safari";
+  } else if (userAgent.includes("Edg")) {
+    return "Edge";
+  } else if (userAgent.includes("OPR")) {
+    return "Opera";
+  } else {
+    return "Other";
+  }
+}
+const browser = getBrowserName();
+
+
+const record = {
+  photo: dataUrl,
+  date: date,
+  browser: browser,
+
+};
+
+
+const history = JSON.parse(localStorage.getItem('loginHistory') || '[]');
+history.push(record);
+localStorage.setItem('loginHistory', JSON.stringify(history));
+
+    });
+
+
+    goHomeBtn.addEventListener('click', () => {
+      // In real app, send data to server or store it, then redirect
+      // setTimeout(() => {
+      window.location.href = "Home.html"; // Replace with your actual homepage
+      // }, 200);
+    });
+  </script>
+</body>
+</html>
