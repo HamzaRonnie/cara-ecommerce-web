@@ -90,8 +90,8 @@ transition: 0.3s ease;
     
 }
 
-#navbar li a:nth-child(7):hover {
-     color: rgb(253, 24, 24);
+#fa-arrow:hover {
+    color: rgb(238, 28, 28);
 }
 
 #navbar li a.active::after,

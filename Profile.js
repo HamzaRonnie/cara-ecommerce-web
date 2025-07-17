@@ -13,16 +13,49 @@ function editProfile() {
   }
 
   function saveProfile() {
-    const name = document.getElementById("newName").value;
-    const email = document.getElementById("newEmail").value;
-    const about = document.getElementById("newAbout").value;
+    const name = document.getElementById("newName").value.trim();
+    const email = document.getElementById("newEmail").value.trim();
+    const about = document.getElementById("newAbout").value.trim();
+
+// if (!name || email ) {
+//   alert ("Please Name or Email are mandetory");
+//   return;
+// }
 
     document.getElementById("userName").textContent = name;
     document.getElementById("userEmail").textContent = email;
     document.getElementById("aboutMe").textContent = about;
 
     closeEditModal();
+
+
+
+  // ✅ Save to localStorage for persistence
+const user = JSON.parse(localStorage.getItem("loggedInUser"));
+
+const oldUsername = user.username;
+const oldEmail = user.emai;
+
+user.username = name;
+user.email = email;
+user.about = about;
+localStorage.setItem("loggedInUser", JSON.stringify(user));
+
+const users = JSON.parse(localStorage.getItem("users") || "[]")
+
+const index = users.findIndex(u => u.username === oldUsername && u.email === oldEmail);
+
+if (index !== -1) {
+  users [index] = user;
+  localStorage.setItem("users", JSON.stringify(users));
+}   else {
+    alert("❌ User not found in users[] list!");
+  }  
+
+
   }
+
+
 
 
   function move() {
@@ -36,96 +69,361 @@ function editProfile() {
 
 
 
-  // 🔹 Section 1: Profile Image Load + Change
-  const profilePic = document.getElementById("profilePic");
-  const fileInput = document.getElementById("fileInput");
 
-  // ✅ Load saved image from localStorage when page loads
-  window.addEventListener("DOMContentLoaded", () => {
-    const savedImage = localStorage.getItem("profileImage");
-    if (savedImage) {
-      profilePic.src = savedImage;
-    }
-  });
+window.addEventListener("DOMContentLoaded", () => {
 
-  // ✅ On image click → open file input
-  profilePic.addEventListener("click", () => fileInput.click());
-
-  // ✅ On file change → show and save image
-  fileInput.addEventListener("change", function () {
-    const file = this.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const imgData = e.target.result;
-        profilePic.src = imgData;
-        localStorage.setItem("profileImage", imgData);
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+    const fileInput = document.getElementById('fileInput');
+    const uploadFromFile = document.getElementById('uploadFromFile');
+    const profilePic = document.getElementById('profilePic');
+    const openCamera = document.getElementById('openCamera');
+    const cameraModal = document.getElementById('cameraModal');
+    const video = document.getElementById('video');
+    const captureBtn = document.getElementById('captureBtn');
+    const closeCamera = document.getElementById('closeCamera');
+    const BalanceSpan = document.getElementById('Balance')
+    const loginHistory = document.getElementById('loginHistoryBody');
+    const tnxHistory = document.getElementById('transactioHistoryBody');
+    let stream;
 
 
-  // 🔹 Section 2: Balance Initialization & Transaction
+      const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  // const currentUserStr = localStorage.getItem("loggedInUser");
+const currentUserStr = localStorage.getItem("loggedInUser");
+if (!isLoggedIn || !currentUserStr) {
+ alert ("No login user exists!");
+ window.location.href = "login.html";
+  return;
+}
+ const currentUser = JSON.parse(currentUserStr);
+   const users = JSON.parse(localStorage.getItem("users") || "[]");
+//  const username = currentUser.username;
 
-//   const balanceSpan = document.getElementById('balance');
 
-  const BalanceSpan = document.getElementById('Balance')
+  // 🔹 Find the full user object from stored users
+  const user = users.find(
+    u => u.username === currentUser.username && u.email === currentUser.email
+  );
+
+  if (!user) {
+    alert("User data not found. Please login again.");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("loggedInUser");
+    window.location.href = "login.html";
+    return;
+  }
+
+  const username = user.username;
+
+
+
+  // 🔹 Display user details
+  document.getElementById("userName").textContent = user.username;
+  document.getElementById("userEmail").textContent = user.email;
+  document.getElementById("aboutMe").textContent = user.about || "About you...";
+  BalanceSpan.textContent = user.balance || "0";
+
+
+
+
 
   // ✅ Initialize balance if not already stored
   function initializeBalance() {
-    let balance = localStorage.getItem('userBalance');
+    let balance = localStorage.getItem(`userBalance_${username}`);
     if (!balance) {
       balance = Math.floor(Math.random() * 9000) + 1000; // Random 4-digit
-      localStorage.setItem('userBalance', balance);
+      localStorage.setItem(`userBalance_${username}`, balance);
     }
     // balanceSpan.textContent = balance;
     BalanceSpan.textContent = balance;
   }
 
+  initializeBalance();
 
-  
 
- 
+  updateLoginHistory();
 
-  // 🔹 Section 3: Load User Data (Name, Email) and Verify Login
 
-  document.addEventListener("DOMContentLoaded", function () {
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-    const userData = JSON.parse(localStorage.getItem("users"));
+  // ————— LOGIN HISTORY —————
+  function updateLoginHistory() {
 
-    // ❌ If not logged in, redirect to login page
-    if (isLoggedIn !== "true" || !userData) {
-      window.location.href = "login.html";
-      return;
-    }
+const currentUserStr = localStorage.getItem("currentUser");
 
-    // ✅ Display user name and email
-    document.getElementById("userName").textContent = userData.username;
-    document.getElementById("userEmail").textContent = userData.email;
+  if (!currentUserStr) {
+    console.error("❌ No current user found in localStorage.");
+    return;
+  }
 
-    // ✅ Initialize balance
-    initializeBalance();
+
+const currentUser = JSON.parse(currentUserStr);
+const username = currentUser.username;
+  console.log("📛 username:", username);
+
+
+    const key = `loginHistory_${username}`;
+    const hist = JSON.parse(localStorage.getItem(key) || "[]");
+
     
+  if (!sessionStorage.getItem("loginRecorded")) {
+
+const image = localStorage.getItem(`profileImage_${username}`) || ""; // current image
+  const browser = detectBrowser(navigator.userAgent);
+  const entry = {
+    date: new Date().toLocaleString(),
+    photo: image || "",
+    browser: browser
+  };
+
+
+  hist.unshift(entry);
+  localStorage.setItem(key, JSON.stringify(hist));
+  sessionStorage.setItem("loginRecorded", "true");
+  loginHistory = hist;
+  // loginHistory.innerHTML = hist.map(item => `<li>${item}</li>`).join("");
+
+
+  }
+
+  renderLoginHistoryTable();
+
+}
+
+
+
+function renderLoginHistoryTable() {
+// ✅ Yahan karo
+
+  // const currentUser = JSON.parse(currentUserStr);
+  // const username = currentUser.username;
+  //   console.log("📛 username:", username);
+
+  const currentUserStr = localStorage.getItem("loggedInUser"); // Same as used in capture.js
+  if (!currentUserStr) {
+    console.error("No logged-in user found.");
+    return;
+  }
+
+  const currentUser = JSON.parse(currentUserStr);
+  const username = currentUser.username;
+
+
+
+  const key = `loginHistory_${username}`;
+  const hist = JSON.parse(localStorage.getItem(key) || "[]");
+
+  const LoginContainer = document.getElementById("loginHistoryBody");
+  if (!LoginContainer) {
+    console.log("❌ loginHistoryBody not found!");
+    return;
+  }
+
+  if (hist.length === 0) {
+    LoginContainer.innerHTML = `<tr><td colspan='3' class="py-4 text-gray-500">No login history found.</td></tr>`;
+    return;
+  }
+
+  LoginContainer.innerHTML = hist.map(item => `
+    <tr class="hover:bg-gray-100 transition">
+      <td class="border px-4 py-2 cursor-pointer"><img src="${item.photo}" class="rounded-full w-14 h-14 object-cover mx-auto"/></td>
+      <td class="border px-4 py-2 cursor-pointer">${item.date}</td>
+      <td class="border px-4 py-2 cursor-pointer">${item.browser}</td>
+    </tr>
+  `).join("")
+}
+
+
+
+
+// function detectBrowser(userAgent) {
+//   userAgent = userAgent.toLowerCase();
+//   if (userAgent.includes("chrome") && !userAgent.includes("edg") && !userAgent.includes("opr")) {
+//     return "Chrome";
+//   }
+//   if (userAgent.includes("firefox")) {
+//     return "Firefox";
+//   }
+//   if (userAgent.includes("safari") && !userAgent.includes("chrome")) {
+//     return "Safari";
+//   }
+//   if (userAgent.includes("opr") || userAgent.includes("opera")) {
+//     return "Opera";
+//   }
+//   if (userAgent.includes("edg")) {
+//     return "Edge";
+//   }
+//   return "Other";
+// }
+
+
+
+
+  // ————— TRANSACTION HISTORY —————
+  function loadTxnHistory() {
+
+const currentUserStr = localStorage.getItem("loggedInUser");
+// if (!currentUserStr) return;
+  if (!currentUserStr) {
+    console.log("❌ No logged in user found");
+    return;
+  }
+const currentUser = JSON.parse(currentUserStr);
+const username = currentUser.username;
+
+    const key = `tnxHistory_${username}`;
+    const hist = JSON.parse(localStorage.getItem(key) || "[]");
+  
+  const txnContainer = document.getElementById("transactioHistoryBody");
+  if (!txnContainer) {
+    console.log("❌ transactioHistoryBody not found in HTML!");
+    return;
+  }
+
+  if (hist.length === 0) {
+    txnContainer.innerHTML = "<li>No transactions found.</li>";
+    return;
+  }
+
+
+
+    txnContainer.innerHTML = hist.map(t => `<li>${t.date} – ${t.amount}</li>`).join("");
+  }
+  loadTxnHistory();
+
+
+
+
+
+     const savedImage = localStorage.getItem(`profileImage_${username}`);
+    if (savedImage) {
+      profilePic.src = savedImage;
+    }
+    // Upload from gallery/file
+
+uploadFromFile.addEventListener('click', () => fileInput.click());
+
+    profilePic.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const imgData = e.target.result;
+          profilePic.src = imgData;
+          localStorage.setItem(`profileImage_${username}`, imgData); 
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Open camera modal
+    openCamera.addEventListener('click', async () => {
+      cameraModal.classList.remove('hidden');
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+
+await new Promise(resolve => {
+  video.onloadedmetadata = () => {
+    video.play();
+    resolve();
+  }
+});
+
+      } catch (err) {
+         console.error("Camera Error:", err);
+        alert("Camera not accessible. Please check permissions.");
+      }
+    });
+
+    // Capture from camera
+    captureBtn.addEventListener('click', () => {
+
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        alert ("video is not yet ready. Please wait a moment.");
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+const maxSize = 400;
+
+let w = video.videoWidth;
+let h = video.videoHeight;      
+
+if (w > h) {
+  if (w > maxSize) {
+    h *= maxSize  / w;
+    w = maxSize;
+  }
+} else {
+  if ( h > maxSize) {
+    w *= maxSize / h;
+    h = maxSize;
+  }
+}
+
+canvas.width = w;
+canvas.height = h;
+
+
+      ctx.drawImage(video, 0, 0, w, h);
+
+      const imageDataURL = canvas.toDataURL('image/png');
+      profilePic.src = imageDataURL;
+
+        try {
+    localStorage.setItem(`profileImage_${username}`, imageDataURL);
+    console.log('✅ Image saved to localStorage');
+  } catch (e) {
+    console.error('❌ Failed to save image to localStorage:', e);
+    alert("Failed to save image. Maybe it's too large?");
+  }
+
+      // localStorage.setItem('profileImage', imageDataURL);
+      
+
+      stream.getTracks().forEach(track => track.stop());
+      cameraModal.classList.add('hidden');
+    });
+
+    // Close camera modal
+    closeCamera.addEventListener('click', () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      cameraModal.classList.add('hidden');
+    });
+
+
+
+
+
+
+
+
+  // 🔹 Section 1: Profile Image Load + Change
+  // const CameraBtn = document.getElementById('cameraBtn')
+  // const profilePic = document.getElementById("profilePic");
+  // const fileInput = document.getElementById("fileInput");
+
+  // ✅ Load saved image from localStorage when page loads
+ 
 
   });
 
-  // 🔹 Section 4: Logout Function
 
-  function logout() {
+     function logout() {
     localStorage.setItem("isLoggedIn", "false"); // Just log out (keep data)
     window.location.href = "login.html";
   }
 
+  // ✅ On image click → open file input
+  
 
-  // function move() {
-  //   window.location.href = "Transaction.html"
-  // }
+  // 🔹 Section 2: Balance Initialization & Transaction
 
-  // 🔹 Section 5: Expose transaction for buttons (optional)
-//   window.makeTransaction = makeTransaction;
-//   window.logout = logout;
-
+//   const balanceSpan = document.getElementById('balance');
 
 
 function toggleColumn (columnClass) { 
@@ -133,21 +431,24 @@ function toggleColumn (columnClass) {
   elements.forEach(ele => {
   ele.classList.remove('invisible');
   });
-  renderTable();
+  renderLoginHistoryTable();
 }
 
 
+let loginHistory = [];
 let currentPage = 1;
 const rowsPerPage = 3;
 let sortDirections = [null,'asc','asc'];
-let loginHistory = [];
 
 // let transactionHistory = JSON.parse(localStorage.getItem('transactionHistory') || '[]').reverse();
 
   document.addEventListener('DOMContentLoaded', function() {
     // const HistoryBody = document.getElementById('transactionHistoryBody');
     const historyBody = document.getElementById('loginHistoryBody');
-     loginHistory = JSON.parse(localStorage.getItem('loginHistory') || '[]').reverse();
+
+    const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
+    const username = currentUser?.username || "guest";
+     loginHistory = JSON.parse(localStorage.getItem(`loginHistory_${username}`) || '[]').reverse();
     
   
   if (!historyBody) {
@@ -163,16 +464,16 @@ let loginHistory = [];
 
 document.getElementById('searchInput').addEventListener('keyup', () => {
   currentPage = 1;
-  renderTable();
+  renderLoginHistoryTable();
 });
 
 
 
-renderTable();
+renderLoginHistoryTable();
 
 });
 
-function renderTable() {
+function renderLoginHistoryTable() {
 // const HistoryBody = document.getElementById('transactionHistoryBody');
 const historyBody = document.getElementById('loginHistoryBody');
 const searchValue = document.getElementById('searchInput').value.toLowerCase();
@@ -360,7 +661,10 @@ else if (colIndex === 2) {
     let currentsPage = 1;
     const rowssPerPage = 3;
     let sortsDirections = [null, null, null, 'asc', 'asc', 'asc', 'asc', 'asc'];
-    let transactionHistory = JSON.parse(localStorage.getItem('transactionHistory') || '[]').reverse();
+
+    const currentUser = JSON.parse(localStorage.getItem("loggedInUser"));
+    const username = currentUser?.username || "guest";
+    let transactionHistory = JSON.parse(localStorage.getItem(`tnxHistory_${username}`) || '[]').reverse();
     
     document.addEventListener('DOMContentLoaded', () => {
       // if (!localStorage.getItem('transactionHistory')) {
@@ -596,6 +900,7 @@ today.setHours(0, 0, 0, 0);
       }
     
       // Expiry Date Check
+      if (!expiryDate || expiryDate < tomorrow)
       if (!expiryDate || expiryDate.getFullYear() !== tomorrow.getFullYear() ||
           expiryDate.getMonth() !== tomorrow.getMonth() ||
           expiryDate.getDate() !== tomorrow.getDate()
@@ -609,13 +914,28 @@ today.setHours(0, 0, 0, 0);
         alert('❌ Invalid CVC');
         return;
       }
+
+
+  // ✅ Fetch current logged-in user
+  const currentUser = JSON.parse(localStorage.getItem('loggedInUser'));
+  if (!currentUser || !currentUser.username) {
+    alert('❌ User not logged in.');
+    return;
+  }
+
     
       // Success
       // alert(`✅ Transaction of $${amount} Successful!`);
 
 
+    const username = currentUser.username;
+    const balanceKey = `userBalance_${username}`;
+    const tnxKey = `tnxHistory_${username}`;
+
+
+
 //  ✅ Perform transaction (detuct amount) 
-  let currentBalance = parseInt(localStorage.getItem('userBalance'));
+  let currentBalance = parseInt(localStorage.getItem(balanceKey) || "0");
 
   if(isNaN(amount) || amount <= 0) {
     alert ("Please enter a valid amount.");
@@ -624,42 +944,44 @@ today.setHours(0, 0, 0, 0);
 
   if (currentBalance >= amount) {
     const newBalance = currentBalance - amount;
-    localStorage.setItem('userBalance', newBalance);
+    localStorage.setItem(balanceKey, newBalance);
+
+    if ( typeof BalanceSpan !== "undefined") {
     BalanceSpan.textContent = newBalance;
+    }
 
 
-
-     const transactionHistory = JSON.parse(localStorage.getItem('transactionHistory') || '[]');
+     const transactionHistory = JSON.parse(localStorage.getItem(tnxKey) || '[]');
 
      const newTransaction = {
       cardNumber : cardNumber,
-      amount : amount,
-      date : new Date () .toISOString(),
+      amount : `- ₹${amount}`,
+      date : new Date () .toLocaleString(),
       cvc : cvc,
       status : 'Success',
       
     };
 
     transactionHistory.unshift(newTransaction);
-    localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
+    localStorage.setItem(tnxKey, JSON.stringify(transactionHistory));
     // Success
     alert(`✅Rs. ${amount} paid successfully!`);
   } else {
 
 
-const transactionHistory = JSON.parse(localStorage.getItem('transactionHistory') || '[]');
+const transactionHistory = JSON.parse(localStorage.getItem(tnxKey) || '[]');
 
 const failedTransaction = {
   cardNumber : cardNumber,
-  amount : amount,
+  amount : `- ₹${amount}`,
   date : new Date ().toISOString(),
   cvc : cvc,
-  status : 'Failed',
+  status : '❌ Failed',
 
 };
 
 transactionHistory.unshift(failedTransaction);
-localStorage.setItem('transactionHistory', JSON.stringify(transactionHistory));
+localStorage.setItem(tnxKey, JSON.stringify(transactionHistory));
 
     alert('❌ Insufficient balance!');
   }
@@ -671,45 +993,3 @@ if (typeof renderTransactionTable === 'function') {
       closeTransaction();
     }
     
-
-
-
-
-
-
-
-
-    // const VALID_CARD_NUMBER = 42424242424242;
-    // const VALID_CVC = 357;
-
-
-    // function makeTransaction(amount) {
-    //   const cardNumber = document.querySelector('#Moveon input[type="text"]').value.trim();
-    //   const expiryDate = new Date (document.querySelector('#Moveon input[type="date"]').value);
-    //   const cvc = document.querySelector('#Moveon input[type="number"]').value.trim();
-
-    //   const today = new Date ();
-    //   today.setHours (0, 0, 0, 0);
-
-
-    //   if (cardNumber !== VALID_CARD_NUMBER) {
-    //      alert ('Invalid Card Number');
-    //     return;
-    //   }
-
-    //   if(!expiryDate || expiryDate <= today) {
-    //     alert('Card is Expired');
-    //     return;
-    //   }
-
-    //   if (cvc !== VALID_CVC) {
-    //     alert ('Invalid CVC');
-    //     return;
-    //   }
-
-    //   alert (`Transaction of $${amount} Successful!`);
-    //   closeTransaction();
-
-
-
-    // }

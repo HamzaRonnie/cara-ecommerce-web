@@ -22,10 +22,7 @@
         Capture
       </button>
       <button
-        id="goHome"
-        disabled
-        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition disabled:opacity-50"
-      >
+        id="goHome" disabled class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition disabled:opacity-50">
         Go to Home
       </button>
     </div>
@@ -41,6 +38,16 @@
     const photo = document.getElementById('photo');
     const captureBtn = document.getElementById('capture');
     const goHomeBtn = document.getElementById('goHome');
+
+
+const currentUserStr = localStorage.getItem("loggedInUser");
+if (!currentUserStr) {
+  alert ("No User LoggedIn");
+  window.location.href = "login.html"
+}
+
+const currentUser = JSON.parse(currentUserStr);
+const username = currentUser.username;
 
     // Access webcam
     navigator.mediaDevices.getUserMedia({ video: true })
@@ -88,6 +95,7 @@
     return "Other";
   }
 }
+
 const browser = getBrowserName();
 
 
@@ -99,11 +107,26 @@ const record = {
 };
 
 
-const history = JSON.parse(localStorage.getItem('loginHistory') || '[]');
-history.push(record);
-localStorage.setItem('loginHistory', JSON.stringify(history));
 
-    });
+    localStorage.setItem(`profileImage_${username}`, dataUrl);
+
+    // ✅ Add to loginHistory_<username>
+    const key = `loginHistory_${username}`;
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    existing.unshift(record); // Add at top
+    localStorage.setItem(key, JSON.stringify(existing));
+
+    // ✅ Mark login recorded (so it doesn't duplicate on refresh)
+    sessionStorage.setItem("loginRecorded", "true");
+  });
+
+
+
+// const history = JSON.parse(localStorage.getItem('loginHistory') || '[]');
+// history.push(record);
+// localStorage.setItem('loginHistory', JSON.stringify(history));
+
+//     });
 
 
     goHomeBtn.addEventListener('click', () => {
